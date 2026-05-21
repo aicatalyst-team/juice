@@ -1,0 +1,11 @@
+.slim/deepwork/
+.DS_Store
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+lfs/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
