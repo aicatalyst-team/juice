@@ -17,6 +17,8 @@ const text = (data: unknown) => ({
   content: [{ type: 'text' as const, text: JSON.stringify(data ?? null, null, 2) }],
 });
 
+const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1', '[::1]']);
+
 export function createJuiceMcpServer(store: Store = openStore()) {
   const server = new McpServer(
     { name: 'juice', version: '0.1.0' },
@@ -112,15 +114,18 @@ export function createJuiceMcpServer(store: Store = openStore()) {
 export async function runStdio() {
   await createJuiceMcpServer().connect(new StdioServerTransport());
 }
+
 export async function runHttp() {
   const token = process.env.JUICE_TOKEN;
   const host = process.env.JUICE_HOST ?? '127.0.0.1';
   const port = Number(process.env.JUICE_PORT ?? 3000);
-  const loopbackHosts = new Set(['127.0.0.1', 'localhost', '::1', '[::1]']);
-  if (!token && !loopbackHosts.has(host)) {
+
+  if (!token && !LOOPBACK_HOSTS.has(host)) {
     throw new Error('JUICE_TOKEN is required when JUICE_HOST is not loopback');
   }
+
   const store = openStore();
+
   createServer(async (req, res) => {
     try {
       if (token && req.headers.authorization !== `Bearer ${token}`) {
@@ -131,13 +136,18 @@ export async function runHttp() {
         res.writeHead(404).end('not found');
         return;
       }
+
       const mcp = createJuiceMcpServer(store);
       const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+
       await mcp.connect(transport);
       await transport.handleRequest(req, res);
     } catch (err) {
       console.error('Juice MCP HTTP request failed', err);
-      if (!res.headersSent) res.writeHead(500).end('internal error');
+
+      if (!res.headersSent) {
+        res.writeHead(500).end('internal error');
+      }
     }
   }).listen(port, host, () => console.error(`Juice MCP HTTP listening on ${host}:${port}`));
 }
