@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>An MCP Taste System for AI Agents</strong><br />
-  <em>Not generic memory—durable taste signals that guide agents when it matters most.</em>
+  <em>Not generic memory - durable taste signals that guide agents when it matters most.</em>
 </p>
 
 <p align="center">
@@ -20,7 +20,7 @@
 
 **Juice** is a lightweight, specialized Model Context Protocol (MCP) server designed to act as an agent's **taste system**.
 
-Unlike generic memory systems that store everything indiscriminately, Juice is built specifically to capture and recall **durable taste signals**—preferences, style directions, judgment patterns, and formatting choices. It returns highly compact guidance only when the agent is performing a task where personal or project-level taste actually affects the outcome.
+Unlike generic memory systems that store everything indiscriminately, Juice is built specifically to capture and recall **durable taste signals**: preferences, style directions, judgment patterns, and formatting choices. It returns highly compact guidance only when the agent is performing a task where personal or project-level taste actually affects the outcome.
 
 ---
 
@@ -28,7 +28,7 @@ Unlike generic memory systems that store everything indiscriminately, Juice is b
 
 - **Taste ≠ Generic Memory:** Juice doesn't store chat history or factual knowledge. It stores _stylistic and qualitative preferences_.
 - **Compact & Context-Aware:** Exposes a lightweight trigger manifest so agents can quickly determine if they have relevant taste signals _before_ pulling full details.
-- **Scoped Architecture:** Organize taste signals by context—`global`, `project`, `repo`, or `agent`.
+- **Scoped Architecture:** Organize taste signals by context: `global`, `project`, `repo`, or `agent`.
 - **Seamless Integrations:** Bundled as an agent skill and fully compatible with **OpenCode**, **Claude Code**, **Cursor**, **Codex**, and other modern MCP clients.
 
 ---
@@ -116,7 +116,7 @@ JUICE_DB=/path/to/custom-juice.sqlite
 
 ## 🧠 The Juice Agent Skill
 
-Juice is more than just raw tools—it comes bundled with an **agent skill** that teaches models _how and when_ to capture and recall taste.
+Juice is more than just raw tools. It comes bundled with an **agent skill** that teaches models _how and when_ to capture and recall taste.
 
 The canonical skill definition is located at:
 
@@ -140,8 +140,8 @@ Copy `skills/juice` (or the `SKILL.md` file) directly into your harness's skill 
 | :--------------- | :----------------------------------------- | :-------------------------------- |
 | **OpenCode**     | `~/.config/opencode/skills/juice/SKILL.md` | `.opencode/skills/juice/SKILL.md` |
 | **Claude Code**  | `~/.claude/skills/juice/SKILL.md`          | `.claude/skills/juice/SKILL.md`   |
-| **Codex**        | —                                          | `.agents/skills/juice/SKILL.md`   |
-| **Cursor**       | —                                          | `.agents/skills/juice/SKILL.md`   |
+| **Codex**        | N/A                                        | `.agents/skills/juice/SKILL.md`   |
+| **Cursor**       | N/A                                        | `.agents/skills/juice/SKILL.md`   |
 
 > 💡 **Note:** Always restart your agent client after installing or updating skills.
 
