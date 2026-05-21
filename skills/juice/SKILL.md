@@ -32,6 +32,10 @@ Save / Edit / Project only / Ignore
 
 Only call `juice_save` after the user confirms or clearly asks to save/remember/juice it.
 
+After saving, continue the user's original request. Juice capture is a small
+side action, not the whole response. Do not stop after saying that a signal was
+saved unless the user only asked to save the signal.
+
 Prefer concise suggestions. Do not interrupt for weak, ambiguous, or purely
 temporary instructions.
 
@@ -65,6 +69,17 @@ When a message mixes personal taste with current task context, split them:
 
 If the right scope is unclear, ask whether the signal should be global or limited
 to the current project/repo/agent.
+
+When calling Juice tools, only include identity fields that are relevant to the
+chosen scope:
+
+- For `global`, do not include project, repo, or agent identity.
+- For `project`, include the project identity.
+- For `repo`, include the repo identity.
+- For `agent`, include the agent identity.
+
+Do not pass the model name as the agent identity unless the taste signal is
+specifically about that model or agent behavior.
 
 ## Quality bar
 
