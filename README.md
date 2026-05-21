@@ -1,95 +1,116 @@
 <p align="center">
-  <img src="logo.svg" alt="Juice Logo" width="220" />
+  <img src="logo.svg" alt="Juice" width="220" />
 </p>
 
 <h1 align="center">🧃 Juice</h1>
 
 <p align="center">
-  <strong>An MCP Taste System for AI Agents</strong><br />
-  <em>Not generic memory - durable taste signals that guide agents when it matters most.</em>
+  <strong>A tiny taste layer for AI agents.</strong><br />
+  <em>Save the stuff you keep correcting. Recall it when it actually matters.</em>
 </p>
 
 <p align="center">
-  <a href="#-mcp-tools--resources"><img src="https://img.shields.io/badge/MCP-Protocol-orange.svg" alt="Model Context Protocol" /></a>
+  <a href="#mcp-tools"><img src="https://img.shields.io/badge/MCP-server-orange.svg" alt="MCP server" /></a>
   <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node.js-%3E%3D20-green.svg" alt="Node.js Version" /></a>
   <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.7-blue.svg" alt="TypeScript" /></a>
-  <a href="https://github.com/modelcontextprotocol"><img src="https://img.shields.io/badge/Status-Early%20Preview-111827.svg" alt="Status" /></a>
+  <a href="https://github.com/modelcontextprotocol"><img src="https://img.shields.io/badge/status-early%20preview-111827.svg" alt="Status" /></a>
 </p>
 
 ---
 
-**Juice** is a lightweight, specialized Model Context Protocol (MCP) server designed to act as an agent's **taste system**.
+Juice helps agents pick up your taste over time.
 
-Unlike generic memory systems that store everything indiscriminately, Juice is built specifically to capture and recall **durable taste signals**: preferences, style directions, judgment patterns, and formatting choices. It returns highly compact guidance only when the agent is performing a task where personal or project-level taste actually affects the outcome.
+Not everything belongs in memory. Juice is for preferences, corrections, and
+style instincts - the little things that make work feel more like you. It keeps
+those notes small, scoped, and out of context until an agent actually needs
+them.
 
----
+It runs as a small MCP server and ships with an agent skill that teaches models
+when to capture and recall taste.
 
-## ✨ Features & Philosophy
+## What Juice is for
 
-- **Taste ≠ Generic Memory:** Juice doesn't store chat history or factual knowledge. It stores _stylistic and qualitative preferences_.
-- **Compact & Context-Aware:** Exposes a lightweight trigger manifest so agents can quickly determine if they have relevant taste signals _before_ pulling full details.
-- **Scoped Architecture:** Organize taste signals by context: `global`, `project`, `repo`, or `agent`.
-- **Seamless Integrations:** Bundled as an agent skill and fully compatible with **OpenCode**, **Claude Code**, **Cursor**, **Codex**, and other modern MCP clients.
+- Save taste notes from feedback you want agents to remember.
+- Keep them scoped to `global`, `project`, `repo`, or `agent`.
+- Let agents check a tiny manifest before pulling real taste guidance.
+- Avoid dumping a whole memory file into every prompt.
+- Work across OpenCode, Claude Code, Cursor, Codex, and other MCP clients.
 
----
+## How it works
 
-## 🛠️ MCP Tools & Resources
+```text
+you give feedback
+  -> agent suggests a small Juice note
+  -> you approve, edit, or ignore it
+  -> future agents recall only the relevant notes
+```
 
-Juice exposes a clean, programmatic interface via MCP tools and a specialized URI resource.
+Example:
+
+```text
+User feedback:
+"This copy feels too generic. Make it more direct."
+
+Saved Juice:
+"Prefers direct writing over generic copy."
+
+Later:
+An agent writing docs can recall that note before drafting.
+```
+
+## MCP tools
+
+Juice exposes one resource and a small set of tools.
 
 ### Resource
 
-| URI                | Description                                                                                                                                                       |
-| :----------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `juice://manifest` | Returns a compact trigger manifest containing categories and trigger hints only. **Does not** include full taste statements, keeping context windows lightweight. |
+| URI                | What it does                                                                         |
+| :----------------- | :----------------------------------------------------------------------------------- |
+| `juice://manifest` | Shows categories and trigger hints only. It does not include saved taste statements. |
 
 ### Tools
 
-| Tool                 | Parameters                                                                             | Description                                                                                             |
-| :------------------- | :------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------ |
-| `juice_get_manifest` | None                                                                                   | Returns the same compact trigger manifest as the resource (ideal for clients without resource support). |
-| `juice_prepare`      | `task`, optional `limit`, optional scope identity                                      | Returns only the taste signals relevant to a task.                                                      |
-| `juice_suggest`      | `feedback`, optional scope identity                                                    | Proposes a taste signal for review without saving it.                                                   |
-| `juice_save`         | `statement`, optional `category`, `triggers`, `confidence`, `strength`, scope identity | Saves a confirmed taste signal.                                                                         |
-| `juice_update`       | `id`, optional fields to change                                                        | Updates an existing taste signal.                                                                       |
-| `juice_retire`       | `id`                                                                                   | Soft-deletes/retires a taste signal.                                                                    |
-| `juice_list`         | optional `category`, `status`, scope identity                                          | Lists saved taste signals with optional filters.                                                        |
+| Tool                 | What it does                                           |
+| :------------------- | :----------------------------------------------------- |
+| `juice_get_manifest` | Returns the same small manifest as `juice://manifest`. |
+| `juice_prepare`      | Returns relevant taste notes for a task.               |
+| `juice_suggest`      | Suggests a taste note without saving it.               |
+| `juice_save`         | Saves a confirmed taste note.                          |
+| `juice_update`       | Updates an existing note.                              |
+| `juice_retire`       | Soft-deletes a note.                                   |
+| `juice_list`         | Lists saved notes with optional filters.               |
 
-### Scopes
+## Scopes
 
-- 🌍 **`global`**: Durable personal preferences that should influence work across all projects.
-- 📁 **`project`**: Direction tied to a specific product, brand, or project context.
-- 💻 **`repo`**: Implementation and styling conventions tied to a specific codebase.
-- 🤖 **`agent`**: Behavior and interaction preferences tied to a specific AI client or model.
+| Scope     | Use it for                                              |
+| :-------- | :------------------------------------------------------ |
+| `global`  | Personal taste that should carry across projects.       |
+| `project` | Direction for a specific product, brand, or project.    |
+| `repo`    | Conventions tied to one codebase.                       |
+| `agent`   | Preferences about one client, model, or agent behavior. |
 
----
+## Install and run
 
-## 🚀 Installation & Local Run
-
-### 1. Build the Server
-
-Ensure you have Node.js (>= 20) installed, then clone the repo and build:
+Requires Node.js 20 or newer.
 
 ```bash
 npm install
 npm run build
 ```
 
-### 2. Run the MCP Server
-
-#### Stdio Mode (Recommended for local clients)
+Run as a local stdio MCP server:
 
 ```bash
 node dist/cli.js stdio
 ```
 
-#### HTTP Mode (Recommended for remote/containerized setups)
+Run as a HTTP MCP server:
 
 ```bash
 JUICE_HOST=127.0.0.1 JUICE_PORT=3055 node dist/cli.js http
 ```
 
-For non-loopback HTTP, protect your server with an authorization token:
+If you bind outside loopback, set a token:
 
 ```bash
 JUICE_HOST=100.x.y.z \
@@ -98,62 +119,46 @@ JUICE_TOKEN='your-secure-token' \
 node dist/cli.js http
 ```
 
-### Database Location
-
-By default, Juice stores taste signals in a SQLite database:
+By default, Juice stores data here:
 
 ```text
 ~/.local/share/juice/juice.sqlite
 ```
 
-You can override this path by setting the `JUICE_DB` environment variable:
+Override it with:
 
 ```bash
-JUICE_DB=/path/to/custom-juice.sqlite
+JUICE_DB=/path/to/juice.sqlite
 ```
 
----
+## Install the agent skill
 
-## 🧠 The Juice Agent Skill
-
-Juice is more than just raw tools. It comes bundled with an **agent skill** that teaches models _how and when_ to capture and recall taste.
-
-The canonical skill definition is located at:
+The bundled skill lives here:
 
 ```text
 skills/juice/SKILL.md
 ```
 
-### Automatic Installation (using `skills.sh`)
-
-You can install the Juice skill globally across popular agent harnesses using the `skills` CLI:
+Install it with `skills.sh`:
 
 ```bash
 npx skills add . --global --copy --agent opencode --agent claude-code --agent codex --agent cursor
 ```
 
-### Manual Installation
+Or copy it manually:
 
-Copy `skills/juice` (or the `SKILL.md` file) directly into your harness's skill directory:
+| Client      | Global path                                | Project path                      |
+| :---------- | :----------------------------------------- | :-------------------------------- |
+| OpenCode    | `~/.config/opencode/skills/juice/SKILL.md` | `.opencode/skills/juice/SKILL.md` |
+| Claude Code | `~/.claude/skills/juice/SKILL.md`          | `.claude/skills/juice/SKILL.md`   |
+| Codex       | N/A                                        | `.agents/skills/juice/SKILL.md`   |
+| Cursor      | N/A                                        | `.agents/skills/juice/SKILL.md`   |
 
-| Client / Harness | Global Path                                | Project-Local Path                |
-| :--------------- | :----------------------------------------- | :-------------------------------- |
-| **OpenCode**     | `~/.config/opencode/skills/juice/SKILL.md` | `.opencode/skills/juice/SKILL.md` |
-| **Claude Code**  | `~/.claude/skills/juice/SKILL.md`          | `.claude/skills/juice/SKILL.md`   |
-| **Codex**        | N/A                                        | `.agents/skills/juice/SKILL.md`   |
-| **Cursor**       | N/A                                        | `.agents/skills/juice/SKILL.md`   |
+Restart your agent after installing or updating the skill.
 
-> 💡 **Note:** Always restart your agent client after installing or updating skills.
+## OpenCode setup
 
----
-
-## ⚙️ Configuration
-
-### 1. OpenCode Integration
-
-OpenCode can communicate with Juice via a local stdio connection or a remote HTTP connection. Add the configuration to your global `~/.config/opencode/opencode.json` or project-specific `opencode.json`.
-
-#### Local Stdio Configuration
+Local stdio:
 
 ```json
 {
@@ -169,7 +174,7 @@ OpenCode can communicate with Juice via a local stdio connection or a remote HTT
 }
 ```
 
-#### Remote HTTP Configuration
+Remote HTTP:
 
 ```json
 {
@@ -189,12 +194,13 @@ OpenCode can communicate with Juice via a local stdio connection or a remote HTT
 }
 ```
 
-> 🔑 **Tip:** If your token is stored in a file next to the config, OpenCode supports file substitution:
-> `"Authorization": "Bearer {file:juice-token}"`
+OpenCode also supports file substitution for tokens:
 
-#### OpenCode Skill Discovery
+```json
+"Authorization": "Bearer {file:juice-token}"
+```
 
-OpenCode automatically scans global skills under `~/.config/opencode/skills/**/SKILL.md`. For project-local setups, copy the skill to `.opencode/skills/juice/SKILL.md` or point OpenCode to the skill folder in your configuration:
+To point OpenCode at the bundled skill without copying it:
 
 ```json
 {
@@ -204,13 +210,9 @@ OpenCode automatically scans global skills under `~/.config/opencode/skills/**/S
 }
 ```
 
----
+## Other MCP clients
 
-### 2. Other MCP Clients
-
-#### Stdio Setup
-
-For clients running on the same machine (e.g., Claude Desktop, Cursor):
+For local stdio clients:
 
 ```json
 {
@@ -219,9 +221,7 @@ For clients running on the same machine (e.g., Claude Desktop, Cursor):
 }
 ```
 
-#### Remote HTTP Setup
-
-For remote clients, connect to the streamable HTTP endpoint:
+For remote HTTP clients:
 
 ```text
 URL: http://host-or-tailscale-ip:3055/mcp
@@ -229,31 +229,19 @@ Headers:
   Authorization: Bearer <your-secure-token>
 ```
 
----
+Clients with good MCP resource support can read `juice://manifest`. Other
+clients can call `juice_get_manifest` instead.
 
-## 🛠️ Development
-
-Get involved or customize Juice for your own workflow:
+## Development
 
 ```bash
-# Run tests
 npm test
-
-# Build production files
 npm run build
-
-# Run type checking
 npm run typecheck
-
-# Check formatting
 npm run format:check
-
-# Auto-format codebase
 npm run format
 ```
 
----
-
 <p align="center">
-  Small taste signals. Better agent decisions.
+  Small taste notes. Better agent decisions.
 </p>
