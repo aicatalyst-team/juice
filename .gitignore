@@ -9,3 +9,4 @@ lfs/
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
+.codegraph/

@@ -1,5 +1,13 @@
 import { randomUUID } from 'node:crypto';
-import { insertRecord, listRecords, updateRecord, type Store } from './store.js';
+import {
+  addCategory as addStoreCategory,
+  getCategory,
+  insertRecord,
+  listCategories as listStoreCategories,
+  listRecords,
+  updateRecord,
+  type Store,
+} from './store.js';
 import {
   DEFAULT_CONFIDENCE,
   DEFAULT_STRENGTH,
@@ -9,9 +17,9 @@ import {
 import { canonicalizeScopeIdentity, createAllowedScopeKeys, createScopeKey } from './scope.js';
 import {
   compactCategory,
-  compactStatement,
   extractSearchTerms,
   inferCategoryFromText,
+  normalizeNegativeConstraint,
   normalizeTriggerHints,
 } from './text.js';
 import {
@@ -31,19 +39,41 @@ type ListFilters = ScopeIdentity & { category?: string; status?: JuiceStatus };
 
 export { canonicalizeScopeIdentity as canonicalIdentity, createScopeKey as scopeKey };
 
+export function addCategory(store: Store, input: { name: string; trigger_hints?: string[] }) {
+  const name = compactCategory(input.name);
+  if (!name) throw new CategoryValidationError('category name is required');
+  return addStoreCategory(store, {
+    name,
+    trigger_hints: normalizeTriggerHints(input.trigger_hints ?? []),
+  });
+}
+
+export function listCategories(store: Store) {
+  return listStoreCategories(store);
+}
+
+export class CategoryValidationError extends Error {
+  code = 'invalid_category';
+  constructor(message = 'category must be registered before use') {
+    super(message);
+  }
+}
+
 /**
- * Creates a proposed taste signal from user feedback without mutating storage.
+ * Creates a proposed negative avoidance constraint from user feedback without mutating storage.
  */
 export function suggest(input: { feedback: string } & ScopeIdentity): Suggestion {
   const identity = canonicalizeScopeIdentity(input);
-  const category = inferCategoryFromText(input.feedback);
-  const searchTerms = extractSearchTerms(input.feedback);
+  const statement = normalizeNegativeConstraint(input.feedback);
+  const category = inferCategoryFromText(statement);
+  const searchTerms = extractSearchTerms(statement);
 
   return {
+    kind: 'negative',
     scope: identity.scope,
     scope_key: createScopeKey(identity),
     category,
-    statement: compactStatement(input.feedback),
+    statement,
     triggers: normalizeTriggerHints([category, ...searchTerms.slice(0, 7)]),
     confidence: DEFAULT_CONFIDENCE,
     strength: DEFAULT_STRENGTH,
@@ -51,16 +81,17 @@ export function suggest(input: { feedback: string } & ScopeIdentity): Suggestion
 }
 
 /**
- * Saves a confirmed taste signal. If the caller does not provide category and
+ * Saves a confirmed negative avoidance constraint. If the caller does not provide category and
  * triggers, Juice derives them the same way `suggest` does.
  */
 export function save(store: Store, input: SaveInput) {
   const identity = canonicalizeScopeIdentity(input);
-  const candidate = createSaveCandidate(input, identity);
+  const candidate = createSaveCandidate(store, input, identity);
   const timestamp = new Date().toISOString();
 
   return insertRecord(store, {
     id: randomUUID(),
+    kind: 'negative',
     ...candidate,
     status: 'active',
     created_at: timestamp,
@@ -69,17 +100,17 @@ export function save(store: Store, input: SaveInput) {
 }
 
 /**
- * Applies a partial update to a saved taste signal.
+ * Applies a partial update to a saved negative avoidance constraint.
  */
 export function update(store: Store, id: string, patch: UpdateInput) {
-  const normalizedPatch = normalizeUpdatePatch(patch);
+  const normalizedPatch = normalizeUpdatePatch(store, patch);
   const updatedRecord = updateRecord(store, id, normalizedPatch);
 
   return updatedRecord ?? { ok: false, error: 'not_found', id };
 }
 
 /**
- * Retires a taste signal without deleting history from the database.
+ * Retires a negative avoidance constraint without deleting history from the database.
  */
 export function retire(store: Store, id: string) {
   const retiredRecord = updateRecord(store, id, { status: 'retired' });
@@ -88,7 +119,7 @@ export function retire(store: Store, id: string) {
 }
 
 /**
- * Lists saved taste signals with optional metadata filters.
+ * Lists saved negative avoidance constraints with optional metadata filters.
  */
 export function list(store: Store, filters: ListFilters = {}) {
   return listRecords(store, createRecordFilters(filters));
@@ -96,14 +127,14 @@ export function list(store: Store, filters: ListFilters = {}) {
 
 /**
  * Builds the lightweight manifest agents use to decide whether Juice applies.
- * The manifest intentionally omits taste statements to avoid context bloat.
+ * The manifest intentionally omits constraint statements to avoid context bloat.
  */
 export function manifest(store: Store): Manifest {
   const categories = collectManifestCategories(store);
 
   return {
     schema_version: SCHEMA_VERSION,
-    areas: [...categories.entries()].sort().map(([category, details]) => ({
+    areas: [...categories.entries()].map(([category, details]) => ({
       category,
       trigger_hints: [...details.triggers].sort(),
       scopes: [...details.scopes].sort(),
@@ -112,7 +143,7 @@ export function manifest(store: Store): Manifest {
 }
 
 /**
- * Returns the few taste signals relevant to the current task and scope.
+ * Returns the few avoidance constraints relevant to the current task and scope.
  */
 export function prepare(
   store: Store,
@@ -141,31 +172,37 @@ export function prepare(
 
   return {
     schema_version: SCHEMA_VERSION,
-    heading: 'Taste signals to consider',
+    heading: 'Avoidance constraints to respect',
     relevant: relevantSignals,
   };
 }
 
 function createSaveCandidate(
+  store: Store,
   input: SaveInput,
   identity: ReturnType<typeof canonicalizeScopeIdentity>,
 ) {
   if (!input.category || !input.triggers) {
-    return suggest({ ...input, ...identity, feedback: input.statement });
+    const suggestion = suggest({ ...input, ...identity, feedback: input.statement });
+    assertRegisteredCategory(store, suggestion.category);
+    return suggestion;
   }
+
+  const category = compactCategory(input.category);
+  assertRegisteredCategory(store, category);
 
   return {
     scope: identity.scope,
     scope_key: createScopeKey(identity),
-    category: compactCategory(input.category),
-    statement: compactStatement(input.statement),
+    category,
+    statement: normalizeNegativeConstraint(input.statement),
     triggers: normalizeTriggerHints(input.triggers),
     confidence: clampUnitScore(input.confidence, DEFAULT_CONFIDENCE),
     strength: clampUnitScore(input.strength, DEFAULT_STRENGTH),
   };
 }
 
-function normalizeUpdatePatch(patch: UpdateInput) {
+function normalizeUpdatePatch(store: Store, patch: UpdateInput) {
   const normalizedPatch: Partial<JuiceRecord> = { ...patch };
 
   if (patch.triggers) {
@@ -173,9 +210,10 @@ function normalizeUpdatePatch(patch: UpdateInput) {
   }
   if (patch.category) {
     normalizedPatch.category = compactCategory(patch.category);
+    assertRegisteredCategory(store, normalizedPatch.category);
   }
   if (patch.statement) {
-    normalizedPatch.statement = compactStatement(patch.statement);
+    normalizedPatch.statement = normalizeNegativeConstraint(patch.statement);
   }
   if ('confidence' in patch) {
     normalizedPatch.confidence = clampUnitScore(patch.confidence, DEFAULT_CONFIDENCE);
@@ -190,6 +228,10 @@ function normalizeUpdatePatch(patch: UpdateInput) {
   }
 
   return normalizedPatch;
+}
+
+function assertRegisteredCategory(store: Store, category: string) {
+  if (!category || !getCategory(store, category)) throw new CategoryValidationError();
 }
 
 function createRecordFilters(filters: ListFilters) {
@@ -215,7 +257,15 @@ function createRecordFilters(filters: ListFilters) {
 function collectManifestCategories(store: Store) {
   const categories = new Map<string, { triggers: Set<string>; scopes: Set<Scope> }>();
 
+  for (const registered of listStoreCategories(store)) {
+    categories.set(registered.name, {
+      triggers: new Set<string>(registered.trigger_hints),
+      scopes: new Set<Scope>(),
+    });
+  }
+
   for (const record of listRecords(store, { status: 'active' })) {
+    if (!categories.has(record.category)) continue;
     const category = categories.get(record.category) ?? {
       triggers: new Set<string>(),
       scopes: new Set<Scope>(),
@@ -236,7 +286,7 @@ function scoreRecordForTask(record: JuiceRecord, taskText: string, taskSearchTer
     (trigger) => taskSearchTerms.has(trigger) || taskText.includes(trigger.toLowerCase()),
   ).length;
 
-  // Scoped taste should beat global taste when both match the same task.
+  // Scoped constraints should beat global constraints when both match the same task.
   const scopeSpecificityBonus = record.scope_key !== 'global' ? 0.25 : 0;
   const score =
     triggerMatches * 0.4 + scopeSpecificityBonus + record.confidence * 0.1 + record.strength * 0.1;

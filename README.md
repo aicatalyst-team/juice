@@ -5,8 +5,8 @@
 <h1 align="center">🧃 Juice</h1>
 
 <p align="center">
-  <strong>A tiny taste layer for AI agents.</strong><br />
-  <em>Save the stuff you keep correcting. Recall it when it actually matters.</em>
+  <strong>A negative-constraint memory layer for AI agents.</strong><br />
+  <em>Teach agents what to avoid repeating — without dumping memory into every prompt.</em>
 </p>
 
 <p align="center">
@@ -18,76 +18,143 @@
 
 ---
 
-Juice helps agents pick up your taste over time.
+Juice is a small MCP server for durable **avoidance constraints**: things an AI
+agent should not do again.
 
-Not everything belongs in memory. Juice is for preferences, corrections, and
-style instincts - the little things that make work feel more like you. It keeps
-those notes small, scoped, and out of context until an agent actually needs
-them.
+It is not a general memory store. It deliberately stores only negative guidance:
+what to avoid, stop doing, prohibit, or not repeat. Positive preferences and
+"always do this" instructions are rejected unless they can be converted into a
+clear avoided alternative.
 
-It runs as a small MCP server and ships with an agent skill that teaches models
-when to capture and recall taste.
+Juice keeps constraints scoped, categorized, and out of context until they are
+actually relevant to a task.
 
-## What Juice is for
+## Why Juice exists
 
-- Save taste notes from feedback you want agents to remember.
-- Keep them scoped to `global`, `project`, `repo`, or `agent`.
-- Let agents check a tiny manifest before pulling real taste guidance.
-- Avoid dumping a whole memory file into every prompt.
-- Work across OpenCode, Claude Code, Cursor, Codex, and other MCP clients.
+AI agents repeat mistakes. Full memory files are noisy. Project rules get too
+large. Juice sits between those extremes:
+
+- Save small corrections like "Avoid generic copy when direct writing is appropriate."
+- Scope constraints to `global`, `project`, `repo`, or `agent`.
+- Expose a tiny manifest so agents can decide whether Juice is relevant.
+- Fetch only the few matching constraints for the current task.
+- Keep old positive notes inert instead of silently treating them as constraints.
+- Work with OpenCode, Claude Code, Cursor, Codex, and other MCP clients.
 
 ## How it works
 
 ```text
-you give feedback
-  -> agent suggests a small Juice note
-  -> you approve, edit, or ignore it
-  -> future agents recall only the relevant notes
+User correction
+  -> agent suggests a negative constraint
+  -> user approves, edits, or ignores it
+  -> Juice stores the constraint
+  -> future agents recall only matching constraints
 ```
 
 Example:
 
 ```text
-User feedback:
+Feedback:
 "This copy feels too generic. Make it more direct."
 
-Saved Juice:
-"Prefers direct writing over generic copy."
+Saved Juice constraint:
+"Avoid generic copy when direct writing is appropriate."
 
 Later:
-An agent writing docs can recall that note before drafting.
+An agent drafting landing page copy can recall that constraint before writing.
+```
+
+## What gets stored
+
+Each saved constraint includes:
+
+- `statement` — the avoidance constraint itself.
+- `scope` — where it applies: `global`, `project`, `repo`, or `agent`.
+- `category` — a stable category such as `general`, `design`, or `writing`.
+- `triggers` — short terms used to decide when the constraint is relevant.
+- `confidence` and `strength` — lightweight ranking signals.
+- `status` — `active` or `retired`.
+
+New constraints are stored in `juice_constraints`. Legacy `juice_records` rows
+are left inert so old positive data is not reinterpreted as negative guidance.
+
+## Categories
+
+Juice uses a stable category registry. New databases start with:
+
+- `general`
+- `design`
+- `writing`
+
+The manifest lists registered categories even when they are empty. Use the
+defaults unless a custom reusable category is clearly needed. Custom categories
+must be registered before constraints can use them.
+
+HTTP clients can use:
+
+```http
+GET /api/categories
+POST /api/categories
+```
+
+Example body:
+
+```json
+{ "name": "security", "trigger_hints": ["auth", "tokens"] }
 ```
 
 ## MCP tools
 
-Juice exposes one resource and a small set of tools.
+Juice exposes one MCP resource and a small tool set.
 
 ### Resource
 
-| URI                | What it does                                                                         |
-| :----------------- | :----------------------------------------------------------------------------------- |
-| `juice://manifest` | Shows categories and trigger hints only. It does not include saved taste statements. |
+| URI                | What it does                                                                   |
+| :----------------- | :----------------------------------------------------------------------------- |
+| `juice://manifest` | Returns categories, trigger hints, and scopes. It omits constraint statements. |
 
 ### Tools
 
-| Tool                 | What it does                                           |
-| :------------------- | :----------------------------------------------------- |
-| `juice_get_manifest` | Returns the same small manifest as `juice://manifest`. |
-| `juice_prepare`      | Returns relevant taste notes for a task.               |
-| `juice_suggest`      | Suggests a taste note without saving it.               |
-| `juice_save`         | Saves a confirmed taste note.                          |
-| `juice_update`       | Updates an existing note.                              |
-| `juice_retire`       | Soft-deletes a note.                                   |
-| `juice_list`         | Lists saved notes with optional filters.               |
+| Tool                 | What it does                                                      |
+| :------------------- | :---------------------------------------------------------------- |
+| `juice_get_manifest` | Returns the same small manifest as `juice://manifest`.            |
+| `juice_prepare`      | Returns relevant avoidance constraints for a task.                |
+| `juice_suggest`      | Suggests an avoidance constraint without saving it.               |
+| `juice_add_category` | Registers a reusable category for avoidance constraints.          |
+| `juice_save`         | Saves a confirmed avoidance constraint.                           |
+| `juice_update`       | Updates an existing avoidance constraint.                         |
+| `juice_retire`       | Retires an avoidance constraint without deleting it from storage. |
+| `juice_list`         | Lists saved avoidance constraints with optional filters.          |
 
 ## Scopes
 
 | Scope     | Use it for                                              |
 | :-------- | :------------------------------------------------------ |
-| `global`  | Personal taste that should carry across projects.       |
-| `project` | Direction for a specific product, brand, or project.    |
-| `repo`    | Conventions tied to one codebase.                       |
-| `agent`   | Preferences about one client, model, or agent behavior. |
+| `global`  | Personal constraints that should carry across projects. |
+| `project` | Constraints for a specific product, brand, or project.  |
+| `repo`    | Constraints tied to one codebase.                       |
+| `agent`   | Constraints about one client, model, or agent behavior. |
+
+## Web UI and HTTP API
+
+Juice can run as a small HTTP app with:
+
+- A mobile-friendly web UI.
+- PWA/iOS home-screen assets.
+- No auth for the GUI and REST API by default.
+- Token protection for `/mcp` when a token is configured.
+
+Common endpoints:
+
+```http
+GET  /
+GET  /api/manifest
+GET  /api/categories
+POST /api/categories
+GET  /api/juices
+POST /api/juices
+POST /api/suggest
+```
 
 ## Install and run
 
@@ -104,7 +171,7 @@ Run as a local stdio MCP server:
 node dist/cli.js stdio
 ```
 
-Run as a HTTP MCP server:
+Run as an HTTP MCP server:
 
 ```bash
 JUICE_HOST=127.0.0.1 JUICE_PORT=3055 node dist/cli.js http
@@ -229,8 +296,8 @@ Headers:
   Authorization: Bearer <your-secure-token>
 ```
 
-Clients with good MCP resource support can read `juice://manifest`. Other
-clients can call `juice_get_manifest` instead.
+Clients with MCP resource support can read `juice://manifest`. Other clients can
+call `juice_get_manifest` instead.
 
 ## Development
 
@@ -243,5 +310,5 @@ npm run format
 ```
 
 <p align="center">
-  Small taste notes. Better agent decisions.
+  Remember what to avoid. Repeat fewer mistakes.
 </p>

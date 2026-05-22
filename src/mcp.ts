@@ -1,10 +1,9 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { createServer } from 'node:http';
 import { z } from 'zod';
 import { openStore, type Store } from './store.js';
 import * as juice from './juice.js';
+import { createJuiceHttpServer, LOOPBACK_HOSTS } from './http.js';
 
 const Scope = z.enum(['global', 'project', 'repo', 'agent']);
 const Identity = {
@@ -16,8 +15,6 @@ const Identity = {
 const text = (data: unknown) => ({
   content: [{ type: 'text' as const, text: JSON.stringify(data ?? null, null, 2) }],
 });
-
-const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1', '[::1]']);
 
 export function createJuiceMcpServer(store: Store = openStore()) {
   const server = new McpServer(
@@ -40,13 +37,25 @@ export function createJuiceMcpServer(store: Store = openStore()) {
   );
   server.registerTool(
     'juice_get_manifest',
-    { description: 'Return Juice category manifest without taste statements.' },
+    {
+      description:
+        'Return stable Juice category manifest without avoidance constraint statements. Defaults are general, design, and writing.',
+    },
     () => text(juice.manifest(store)),
+  );
+  server.registerTool(
+    'juice_add_category',
+    {
+      description:
+        'Register a reusable avoidance constraint category with optional JSON trigger hints.',
+      inputSchema: { name: z.string(), trigger_hints: z.array(z.string()).optional() },
+    },
+    (a) => text(juice.addCategory(store, a)),
   );
   server.registerTool(
     'juice_suggest',
     {
-      description: 'Suggest a taste signal without saving.',
+      description: 'Suggest a negative avoidance constraint without saving.',
       inputSchema: { feedback: z.string(), ...Identity },
     },
     (a) => text(juice.suggest(a)),
@@ -54,7 +63,8 @@ export function createJuiceMcpServer(store: Store = openStore()) {
   server.registerTool(
     'juice_save',
     {
-      description: 'Create and save a taste signal.',
+      description:
+        'Create and save a negative avoidance constraint. Custom categories must already be registered.',
       inputSchema: {
         statement: z.string(),
         category: z.string().optional(),
@@ -69,7 +79,7 @@ export function createJuiceMcpServer(store: Store = openStore()) {
   server.registerTool(
     'juice_prepare',
     {
-      description: 'Return relevant taste signals for a task.',
+      description: 'Return relevant avoidance constraints for a task.',
       inputSchema: { task: z.string(), limit: z.number().optional(), ...Identity },
     },
     (a) => text(juice.prepare(store, a)),
@@ -77,7 +87,7 @@ export function createJuiceMcpServer(store: Store = openStore()) {
   server.registerTool(
     'juice_update',
     {
-      description: 'Partially update a taste signal.',
+      description: 'Partially update an avoidance constraint.',
       inputSchema: {
         id: z.string(),
         statement: z.string().optional(),
@@ -93,13 +103,13 @@ export function createJuiceMcpServer(store: Store = openStore()) {
   );
   server.registerTool(
     'juice_retire',
-    { description: 'Soft-delete a taste signal.', inputSchema: { id: z.string() } },
+    { description: 'Soft-delete an avoidance constraint.', inputSchema: { id: z.string() } },
     (a) => text(juice.retire(store, a.id)),
   );
   server.registerTool(
     'juice_list',
     {
-      description: 'List taste signals.',
+      description: 'List avoidance constraints.',
       inputSchema: {
         category: z.string().optional(),
         status: z.enum(['active', 'retired']).optional(),
@@ -124,30 +134,7 @@ export async function runHttp() {
     throw new Error('JUICE_TOKEN is required when JUICE_HOST is not loopback');
   }
 
-  const store = openStore();
-
-  createServer(async (req, res) => {
-    try {
-      if (token && req.headers.authorization !== `Bearer ${token}`) {
-        res.writeHead(401).end('unauthorized');
-        return;
-      }
-      if (!req.url?.startsWith('/mcp')) {
-        res.writeHead(404).end('not found');
-        return;
-      }
-
-      const mcp = createJuiceMcpServer(store);
-      const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-
-      await mcp.connect(transport);
-      await transport.handleRequest(req, res);
-    } catch (err) {
-      console.error('Juice MCP HTTP request failed', err);
-
-      if (!res.headersSent) {
-        res.writeHead(500).end('internal error');
-      }
-    }
-  }).listen(port, host, () => console.error(`Juice MCP HTTP listening on ${host}:${port}`));
+  createJuiceHttpServer({ store: openStore(), host, token }).listen(port, host, () =>
+    console.error(`Juice MCP HTTP listening on ${host}:${port}`),
+  );
 }

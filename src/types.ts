@@ -18,6 +18,7 @@ export type ScopeIdentity = {
 
 export type JuiceRecord = {
   id: string;
+  kind: 'negative';
   scope: Scope;
   scope_key: string;
   category: string;
@@ -36,12 +37,20 @@ export type ManifestArea = {
   scopes: Scope[];
 };
 
+export type JuiceCategory = {
+  name: string;
+  trigger_hints: string[];
+  created_at: string;
+  updated_at: string;
+};
+
 export type Manifest = {
   schema_version: string;
   areas: ManifestArea[];
 };
 
 export type Suggestion = {
+  kind: 'negative';
   scope: Scope;
   scope_key: string;
   category: string;
@@ -58,6 +67,6 @@ type PreparedSignal = Pick<
 
 export type PrepareResult = {
   schema_version: string;
-  heading: 'Taste signals to consider';
+  heading: 'Avoidance constraints to respect';
   relevant: PreparedSignal[];
 };

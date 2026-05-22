@@ -1,8 +1,29 @@
 {
   "name": "juice",
   "version": "0.1.0",
+  "description": "A negative-constraint memory layer for AI agents",
   "type": "module",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alvinunreal/juice.git"
+  },
+  "homepage": "https://github.com/alvinunreal/juice#readme",
+  "bugs": {
+    "url": "https://github.com/alvinunreal/juice/issues"
+  },
+  "keywords": [
+    "ai-agents",
+    "agent-memory",
+    "negative-constraints",
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "opencode",
+    "claude-code",
+    "sqlite",
+    "typescript"
+  ],
   "bin": {
     "juice": "dist/cli.js"
   },
@@ -13,7 +34,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "dev:stdio": "tsx src/cli.ts stdio",
-    "dev:http": "tsx src/cli.ts http"
+    "dev:http": "tsx src/cli.ts http",
+    "deploy:opencode": "node scripts/deploy-opencode.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

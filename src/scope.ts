@@ -49,8 +49,8 @@ export function createScopeKey(identity: ScopeIdentity): string {
 }
 
 /**
- * Returns every scope key that may apply while preparing taste guidance.
- * Global taste always participates as a fallback.
+ * Returns every scope key that may apply while preparing avoidance constraints.
+ * Global constraints always participate as a fallback.
  */
 export function createAllowedScopeKeys(identity: ScopeIdentity) {
   return new Set(

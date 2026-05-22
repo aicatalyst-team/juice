@@ -16,17 +16,26 @@ const STOP_WORDS = new Set([
   'about',
 ]);
 
-const PREFERRED_CATEGORIES = new Set([
-  'test',
-  'tests',
-  'typescript',
-  'mcp',
-  'sqlite',
-  'http',
+const DESIGN_TERMS = new Set([
+  'design',
   'ui',
-  'review',
-  'commit',
+  'ux',
+  'visual',
+  'layout',
   'style',
+  'styles',
+  'color',
+  'animation',
+]);
+const WRITING_TERMS = new Set([
+  'writing',
+  'copy',
+  'docs',
+  'readme',
+  'documentation',
+  'prose',
+  'tone',
+  'headline',
 ]);
 
 /**
@@ -48,13 +57,13 @@ export function extractSearchTerms(text: string) {
 }
 
 /**
- * Picks a compact category name for newly suggested taste signals.
+ * Picks a compact category name for newly suggested avoidance constraints.
  */
 export function inferCategoryFromText(text: string) {
   const searchTerms = extractSearchTerms(text);
-  const preferredCategory = searchTerms.find((word) => PREFERRED_CATEGORIES.has(word));
-
-  return compactText(preferredCategory ?? searchTerms[0] ?? DEFAULT_CATEGORY, MAX_CATEGORY);
+  if (searchTerms.some((word) => DESIGN_TERMS.has(word))) return 'design';
+  if (searchTerms.some((word) => WRITING_TERMS.has(word))) return 'writing';
+  return DEFAULT_CATEGORY;
 }
 
 /**
@@ -74,4 +83,34 @@ export function compactStatement(statement: string) {
 
 export function compactCategory(category: string) {
   return compactText(category, MAX_CATEGORY);
+}
+
+export class ConstraintValidationError extends Error {
+  code = 'positive_only_constraint';
+  constructor(message = 'Juice only stores negative avoidance constraints') {
+    super(message);
+  }
+}
+
+const NEGATIVE_RE = /\b(avoid|do not|don't|never|stop|no longer|without|forbid|prohibit)\b/i;
+const POSITIVE_RE = /\b(like|love|prefer|use|always)\b/i;
+
+function cleanAvoided(value: string) {
+  return compactStatement(value.replace(/[.!?]+$/g, '').trim());
+}
+
+export function normalizeNegativeConstraint(statement: string) {
+  const text = compactStatement(statement);
+  const instead = text.match(/^use\s+(.+?)\s+instead\s+of\s+(.+)$/i);
+  if (instead)
+    return `Avoid ${cleanAvoided(instead[2])} when ${cleanAvoided(instead[1])} is appropriate`;
+  const prefer = text.match(/^prefer\s+(.+?)\s+over\s+(.+)$/i);
+  if (prefer)
+    return `Avoid ${cleanAvoided(prefer[2])} when ${cleanAvoided(prefer[1])} is appropriate`;
+  const rather = text.match(/^(.+?)\s+rather\s+than\s+(.+)$/i);
+  if (rather)
+    return `Avoid ${cleanAvoided(rather[2])} when ${cleanAvoided(rather[1])} is appropriate`;
+  if (NEGATIVE_RE.test(text)) return text;
+  if (POSITIVE_RE.test(text) || text) throw new ConstraintValidationError();
+  throw new ConstraintValidationError('constraint statement is required');
 }
