@@ -1,11 +1,11 @@
 {
   "name": "Juice",
   "short_name": "Juice",
-  "description": "Compact taste signals and behavior guidelines dashboard.",
+  "description": "Negative-constraint memory for AI agents.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#09090b",
+  "background_color": "#fff8ed",
   "theme_color": "#FD5505",
   "orientation": "portrait",
   "icons": [
