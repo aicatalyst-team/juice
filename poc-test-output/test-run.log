@@ -1,0 +1,87 @@
+================================================================================
+AutoPoC Test Run — juice
+Date: 2026-05-25T00:29:33.727227+00:00
+Total run_script invocations: 1
+================================================================================
+
+================================================================================
+RUN #1: /workspace/juice/poc_test.py
+STARTED: 2026-05-25T00:29:33.727227+00:00
+EXIT CODE: 0
+DURATION: 0.12s
+================================================================================
+
+--- STDOUT ---
+{
+  "results": [
+    {
+      "scenario_name": "health-check",
+      "status": "pass",
+      "output": "{\"schema_version\":\"1.0\",\"areas\":[{\"category\":\"general\",\"trigger_hints\":[\"general\"],\"scopes\":[]},{\"category\":\"design\",\"trigger_hints\":[\"design\"],\"scopes\":[]},{\"category\":\"writing\",\"trigger_hints\":[\"writing\"],\"scopes\":[]}]}",
+      "error_message": null,
+      "duration_seconds": 0.02
+    },
+    {
+      "scenario_name": "list-categories",
+      "status": "pass",
+      "output": "[{\"name\":\"general\",\"trigger_hints\":[\"general\"],\"created_at\":\"2026-05-25T00:27:38.519Z\",\"updated_at\":\"2026-05-25T00:27:38.519Z\"},{\"name\":\"design\",\"trigger_hints\":[\"design\"],\"created_at\":\"2026-05-25T00:27:38.546Z\",\"updated_at\":\"2026-05-25T00:27:38.546Z\"},{\"name\":\"writing\",\"trigger_hints\":[\"writing\"],\"created_at\":\"2026-05-25T00:27:38.547Z\",\"updated_at\":\"2026-05-25T00:27:38.547Z\"}]",
+      "error_message": null,
+      "duration_seconds": 0.0
+    },
+    {
+      "scenario_name": "register-category",
+      "status": "pass",
+      "output": "{\"name\":\"security\",\"trigger_hints\":[\"auth\",\"tokens\",\"secrets\"],\"created_at\":\"2026-05-25T00:29:33.705Z\",\"updated_at\":\"2026-05-25T00:29:33.705Z\"}",
+      "error_message": null,
+      "duration_seconds": 0.01
+    },
+    {
+      "scenario_name": "save-constraint",
+      "status": "pass",
+      "output": "{\"id\":\"ee467879-aa15-4332-8055-e0fecec55cbb\",\"kind\":\"negative\",\"scope\":\"global\",\"scope_key\":\"global\",\"category\":\"general\",\"statement\":\"Avoid storing API keys in plain text configuration files\",\"triggers\":[\"api-key\",\"secrets\",\"config\"],\"confidence\":0.9,\"strength\":0.8,\"status\":\"active\",\"created_at\":\"2026-05-25T00:29:33.711Z\",\"updated_at\":\"2026-05-25T00:29:33.711Z\"}",
+      "error_message": null,
+      "duration_seconds": 0.01
+    },
+    {
+      "scenario_name": "recall-constraints",
+      "status": "pass",
+      "output": "[{\"id\":\"ee467879-aa15-4332-8055-e0fecec55cbb\",\"kind\":\"negative\",\"scope\":\"global\",\"scope_key\":\"global\",\"category\":\"general\",\"statement\":\"Avoid storing API keys in plain text configuration files\",\"triggers\":[\"api-key\",\"secrets\",\"config\"],\"confidence\":0.9,\"strength\":0.8,\"status\":\"active\",\"created_at\":\"2026-05-25T00:29:33.711Z\",\"updated_at\":\"2026-05-25T00:29:33.711Z\"}]",
+      "error_message": null,
+      "duration_seconds": 0.0
+    }
+  ]
+}
+
+
+--- STDERR ---
+============================================================
+Juice PoC Test Suite
+Service URL: http://172.30.236.119:8080
+============================================================
+
+[1/5] Testing: Health Check / Manifest...
+[2/5] Testing: List Categories...
+[3/5] Testing: Register Category...
+[4/5] Testing: Save Constraint...
+[5/5] Testing: Recall Constraints...
+
+============================================================
+Results: 5 passed, 0 failed, 5 total
+  ✅ health-check: pass
+  ✅ list-categories: pass
+  ✅ register-category: pass
+  ✅ save-constraint: pass
+  ✅ recall-constraints: pass
+============================================================
+
+
+================================================================================
+PARSED RESULTS SUMMARY
+================================================================================
+Total: 5 | Pass: 5 | Fail: 0 | Error: 0 | Skip: 0
+
+  [PASS ] health-check (0.0s)
+  [PASS ] list-categories (0.0s)
+  [PASS ] register-category (0.0s)
+  [PASS ] save-constraint (0.0s)
+  [PASS ] recall-constraints (0.0s)
