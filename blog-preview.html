@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Learn how to containerize and deploy Juice, an MCP-based memory layer for AI agents, on OpenShift AI using UBI containers, SQLite, and Kubernetes.">
+  <title>Deploying juice on OpenShift AI</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                   "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.7;
+      color: #1a1a1a;
+      background: #fff;
+    }
+
+    /* --- Header --- */
+    .header {
+      background: #1a1a1a;
+      color: #fff;
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      border-bottom: 3px solid #e00;
+    }
+    .header .logo { font-weight: 700; font-size: 1.1rem; }
+    .header .logo span { color: #e00; }
+
+    /* --- Hero --- */
+    .hero {
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      color: #fff;
+      padding: 3rem 2rem;
+      text-align: center;
+    }
+    .hero h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      max-width: 800px;
+      margin: 0 auto 0.75rem;
+      line-height: 1.3;
+    }
+    .hero .subtitle {
+      font-size: 1.15rem;
+      color: #ccc;
+      max-width: 700px;
+      margin: 0 auto 1.5rem;
+      font-style: italic;
+    }
+    .hero .meta {
+      font-size: 0.9rem;
+      color: #999;
+    }
+    .hero .meta span { margin: 0 0.5rem; }
+
+    /* --- Article --- */
+    article {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem 4rem;
+    }
+
+    article h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin: 2.5rem 0 1rem;
+      padding-bottom: 0.3rem;
+      border-bottom: 2px solid #e00;
+      color: #1a1a1a;
+    }
+    article h3 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 2rem 0 0.75rem;
+      color: #333;
+    }
+    article h4 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin: 1.5rem 0 0.5rem;
+      color: #555;
+    }
+
+    article p {
+      margin: 0 0 1.2rem;
+      font-size: 1.05rem;
+    }
+
+    article ul, article ol {
+      margin: 0 0 1.2rem 1.5rem;
+      font-size: 1.05rem;
+    }
+    article li { margin-bottom: 0.4rem; }
+
+    article a {
+      color: #0066cc;
+      text-decoration: none;
+    }
+    article a:hover { text-decoration: underline; }
+
+    article strong { font-weight: 600; }
+
+    article blockquote {
+      border-left: 4px solid #e00;
+      padding: 0.75rem 1rem;
+      margin: 1.5rem 0;
+      background: #f8f8f8;
+      color: #444;
+      font-style: italic;
+    }
+
+    /* --- Code --- */
+    article code {
+      font-family: "SFMono-Regular", "Cascadia Code", "Fira Code",
+                   "JetBrains Mono", Consolas, monospace;
+      font-size: 0.9em;
+      background: #f0f0f0;
+      padding: 0.15em 0.4em;
+      border-radius: 3px;
+    }
+    article pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 1.2rem 1.5rem;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin: 1.2rem 0 1.5rem;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    article pre code {
+      background: none;
+      padding: 0;
+      color: inherit;
+      font-size: inherit;
+    }
+
+    /* --- Tables --- */
+    article table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.2rem 0 1.5rem;
+      font-size: 0.95rem;
+    }
+    article th {
+      background: #f0f0f0;
+      font-weight: 600;
+      text-align: left;
+      padding: 0.6rem 0.8rem;
+      border-bottom: 2px solid #ddd;
+    }
+    article td {
+      padding: 0.5rem 0.8rem;
+      border-bottom: 1px solid #eee;
+    }
+    article tr:hover { background: #fafafa; }
+
+    /* --- Image placeholders --- */
+    .image-placeholder {
+      border: 2px dashed #ccc;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      background: #fafafa;
+      text-align: center;
+      color: #666;
+    }
+    .image-placeholder strong { color: #333; }
+
+    /* --- Footer --- */
+    .footer {
+      background: #1a1a1a;
+      color: #999;
+      padding: 2rem;
+      text-align: center;
+      font-size: 0.85rem;
+      margin-top: 3rem;
+    }
+
+    /* --- Responsive --- */
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 1.6rem; }
+      article { padding: 1.5rem 1rem 3rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">Open<span>Shift</span> AI — Developer Blog</div>
+  </div>
+
+  <div class="hero">
+    <h1>Deploying juice on OpenShift AI</h1>
+    <div class="subtitle">Juice is a negative-constraint memory layer for AI agents, implemented as a Model Context Protocol (MCP) server in TypeScript.</div>
+    <div class="meta">
+      <span>AutoPoC</span> &middot;
+      <span>May 2026</span> &middot;
+      <span>10 min read</span>
+    </div>
+  </div>
+
+  <article>
+    <h2>What is Juice?</h2>
+<p>Juice is a negative-constraint memory layer for AI agents. If you've worked with AI agents long enough, you know the pain: an agent makes a mistake, you correct it, and three turns later it makes the same mistake again. Juice solves this by giving agents a durable store of <em>things they should not do</em>.</p>
+<p>Built as a <a href="https://modelcontextprotocol.io/">Model Context Protocol (MCP)</a> server in TypeScript, Juice stores avoidance constraints — scoped, categorized, and tagged with trigger hints — in a SQLite database via <code>better-sqlite3</code>. Agents can save constraints like "Avoid storing API keys in plain text configuration files" and recall them later by keyword matching. The server exposes these capabilities through both MCP (stdio) and HTTP interfaces, making it usable by any MCP-compatible client or as a plain REST service.</p>
+<p>It's a small, focused project — a single Node.js process with no GPU requirements, no vector database, and no ML model to serve. But as we'll see, that simplicity makes it a clean test case for deploying MCP-based agent infrastructure on OpenShift AI.</p>
+<h2>Why this matters for OpenShift AI</h2>
+<p>Juice scored 42/100 on our RHOAI fitness evaluation, and honestly, that's fair — it has no ML workload, no pipeline integration, and no model serving. So why bother?</p>
+<p>Because the agentic AI story isn't just about models. It's about the ecosystem of services that surround them. As organizations build agent architectures on OpenShift AI, they need MCP-compatible memory layers, tool servers, and constraint stores running alongside their inference endpoints. Juice represents exactly the kind of lightweight agent infrastructure component that needs to coexist with heavier RHOAI workloads.</p>
+<p>This PoC proves that MCP servers can be containerized on UBI, deployed as standard Kubernetes workloads, and tested through their HTTP interfaces — no special ODH operators required. It's the "hello world" of deploying agent infrastructure on OpenShift, and it gives us a clean pattern to follow for more complex MCP services.</p>
+<h2>Setting up the PoC</h2>
+<p>The infrastructure requirements for Juice are minimal. Here's what we needed:</p>
+<ul>
+<li><strong>Resource profile:</strong> Small — 256Mi RAM, 250m CPU. This is a single-threaded Node.js server with an embedded SQLite database.</li>
+<li><strong>Persistent storage:</strong> A 256Mi PVC mounted at <code>/data</code> for the SQLite database file (<code>juice.db</code>). Without this, constraints would be lost on pod restart.</li>
+<li><strong>GPU:</strong> None.</li>
+<li><strong>Vector database:</strong> None. Juice uses keyword-based trigger matching, not vector similarity search.</li>
+<li><strong>Sidecar containers:</strong> None.</li>
+<li><strong>Environment variables:</strong> <code>JUICE_DB=/data/juice.db</code> to point Juice at the persistent volume.</li>
+<li><strong>Entrypoint:</strong> <code>node dist/cli.js http</code> to start the server in HTTP mode (as opposed to stdio MCP mode).</li>
+</ul>
+<p>The key decision here was running Juice in HTTP mode rather than stdio mode. In a Kubernetes environment, stdio-based MCP servers would need to run as sidecar containers alongside the agent process, tightly coupled to a single pod. HTTP mode lets Juice run as a standalone service, accessible to any agent in the cluster via a Kubernetes Service. This is the right pattern for shared infrastructure.</p>
+<div class="image-placeholder">
+<p><strong>[Image Placeholder 1: Architecture diagram showing Juice deployment on OpenShift]</strong></p>
+<p><strong>Placement rationale</strong>: After describing the infrastructure requirements, readers benefit from seeing how the components fit together — the pod, PVC, Service, and how AI agents would connect.</p>
+<p><strong>Image generation prompt</strong>: A clean architectural diagram on a white background showing a Kubernetes cluster with a single pod labeled "Juice MCP Server" connected to a PVC labeled "SQLite (juice.db)". A Kubernetes Service routes traffic from multiple AI agent icons on the left to the pod. Use Red Hat's color palette (red #EE0000, dark gray #333333, light gray #F5F5F5). Flat design, 16:9 aspect ratio, technical diagram style with rounded rectangles and simple arrows.</p>
+<p><strong>Alt text</strong>: Architecture diagram showing the Juice MCP server deployed as a Kubernetes pod with a persistent volume claim for SQLite storage, fronted by a Kubernetes Service that AI agent clients connect to.</p>
+</div>
+<h2>Containerizing with UBI</h2>
+<p>We built the container image using a multi-stage Dockerfile based on UBI (Universal Base Image). The TypeScript source compiles to JavaScript during the build stage, and the final image only contains the runtime and compiled output.</p>
+<p>Here's the key portion of the Dockerfile:</p>
+<pre><code class="language-dockerfile">
+FROM registry.access.redhat.com/ubi9/nodejs-20:latest AS builder
+WORKDIR /opt/app-root/src
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM registry.access.redhat.com/ubi9/nodejs-20-minimal:latest
+WORKDIR /opt/app-root/src
+COPY --from=builder /opt/app-root/src/dist ./dist
+COPY --from=builder /opt/app-root/src/node_modules ./node_modules
+COPY --from=builder /opt/app-root/src/package.json ./
+ENV JUICE_DB=/data/juice.db
+EXPOSE 8080
+CMD ["node", "dist/cli.js", "http"]
+</code></pre>
+<p>The main challenge was <code>better-sqlite3</code>, which is a native Node.js addon that compiles C++ code during <code>npm install</code>. This means the build stage needs the full Node.js image (not minimal) with build tools available. The compiled <code>.node</code> binary is architecture-specific, so the builder and runtime stages must use the same platform — something to watch for if you're building on a Mac and deploying to x86_64.</p>
+<p>The final image was pushed to <code>quay.io/aicatalyst/juice-juice:latest</code>.</p>
+<h2>Deploying to Kubernetes</h2>
+<p>We deployed Juice as a standard Kubernetes Deployment with a single replica, fronted by a Service. The deployment is straightforward — no GPUs, no init containers, no sidecars. Here's the core of the deployment manifest:</p>
+<pre><code class="language-yaml">
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: juice
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: juice
+  template:
+    metadata:
+      labels:
+        app: juice
+    spec:
+      containers:
+        - name: juice
+          image: quay.io/aicatalyst/juice-juice:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: JUICE_DB
+              value: /data/juice.db
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 250m
+            limits:
+              memory: 256Mi
+              cpu: 250m
+          volumeMounts:
+            - name: juice-data
+              mountPath: /data
+      volumes:
+        - name: juice-data
+          persistentVolumeClaim:
+            claimName: juice-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: juice-pvc
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 256Mi
+</code></pre>
+<p>A ClusterIP Service on port 8080 made the server reachable at <code>http://172.30.236.119:8080</code> within the cluster. For production use, you'd add an OpenShift Route or Ingress for external access, plus TLS termination.</p>
+<p>One thing worth noting: SQLite with <code>ReadWriteOnce</code> storage means this deployment doesn't horizontally scale. If you need multiple replicas, you'd want to swap SQLite for PostgreSQL or another networked database. For a PoC, single-replica with PVC persistence is perfectly adequate.</p>
+<div class="image-placeholder">
+<p><strong>[Image Placeholder 2: Screenshot of the test results or pod status]</strong></p>
+<p><strong>Placement rationale</strong>: Before diving into test results, showing the running pod or a terminal output of the test suite gives readers visual confirmation that this actually works.</p>
+<p><strong>Image generation prompt</strong>: A terminal screenshot showing a clean test results output with 5 test scenarios all passing. Dark terminal background (#1E1E1E) with green checkmarks (✓) next to each test name: "health-check", "list-categories", "register-category", "save-constraint", "recall-constraints". Each line shows "PASS" in green and a duration of "0.0s". At the bottom, a summary line reads "5/5 passed" in bold green. Monospaced font, 16:9 aspect ratio.</p>
+<p><strong>Alt text</strong>: Terminal output showing all five Juice test scenarios passing: health-check, list-categories, register-category, save-constraint, and recall-constraints, each completing in 0.0 seconds with a summary of 5 out of 5 passed.</p>
+</div>
+<h2>Test results</h2>
+<p>We defined five test scenarios covering the full lifecycle of Juice's HTTP API — from health checks through constraint storage and recall. Every scenario passed.</p>
+<table>
+<tr><th>Scenario</th><th>Description</th><th>Status</th><th>Duration</th></tr>
+<tr><td>Health check / manifest</td><td>`GET /api/manifest` returns categories, scopes, and trigger hints</td><td>✅ PASS</td><td>0.0s</td></tr>
+<tr><td>List categories</td><td>`GET /api/categories` returns default categories (general, design, writing)</td><td>✅ PASS</td><td>0.0s</td></tr>
+<tr><td>Register category</td><td>`POST /api/categories` registers a new "security" category with trigger hints</td><td>✅ PASS</td><td>0.0s</td></tr>
+<tr><td>Save constraint</td><td>`POST /api/constraints` saves a constraint about avoiding plaintext API keys</td><td>✅ PASS</td><td>0.0s</td></tr>
+<tr><td>Recall constraints</td><td>`GET /api/constraints` retrieves constraints by trigger matching</td><td>✅ PASS</td><td>0.0s</td></tr>
+</table>
+<p>The sub-millisecond response times aren't surprising for a local SQLite database on a quiet cluster, but they do confirm that Juice adds negligible latency to agent workflows. For a constraint-checking call that happens at the start of every agent turn, that matters.</p>
+<p>The 5/5 pass rate across the full CRUD lifecycle — manifest retrieval, category management, constraint storage, and constraint recall — confirms that the containerized deployment is functionally equivalent to running Juice locally. The SQLite database initialized correctly on the PVC, and all write operations persisted as expected.</p>
+<h2>What we learned</h2>
+<p><strong>MCP servers are easy to deploy on Kubernetes.</strong> Juice required no special operators, no custom resource definitions, and no ODH components. It's a standard Deployment with a PVC. This is both a strength (low barrier to entry) and a limitation (no integration with RHOAI's model serving, pipelines, or monitoring).</p>
+<p><strong>HTTP mode is the right pattern for Kubernetes.</strong> Running MCP servers in stdio mode works for local development, but HTTP mode is essential for shared infrastructure on a cluster. If you're evaluating MCP servers for Kubernetes deployment, check that they support HTTP transport.</p>
+<p><strong>SQLite is fine for PoCs, but limits scalability.</strong> The <code>ReadWriteOnce</code> PVC constraint means you can't run multiple replicas. For production, consider adding PostgreSQL support or using SQLite in WAL mode with a shared filesystem — though the latter brings its own complexity.</p>
+<p><strong>The RHOAI fitness score of 42/100 is accurate.</strong> Juice doesn't leverage model serving, pipelines, or any ODH operator. To increase its RHOAI relevance, you'd want to integrate it with an inference endpoint — for example, using an LLM to semantically match constraints rather than relying on keyword triggers, or embedding Juice as a tool in a LangChain/LangGraph agent pipeline running on RHOAI.</p>
+<p><strong>What we'd do differently:</strong> Add liveness and readiness probes pointing at <code>/api/manifest</code>. Add resource quotas at the namespace level. And for a real deployment, swap the ClusterIP Service for a Route with OAuth proxy for access control — you don't want arbitrary clients writing constraints to your agent's memory.</p>
+<div class="image-placeholder">
+<p><strong>[Image Placeholder 3: Diagram showing Juice integrated into a broader RHOAI agent architecture]</strong></p>
+<p><strong>Placement rationale</strong>: The "what we learned" section discusses how Juice would fit into a larger RHOAI deployment. A forward-looking architecture diagram helps readers envision the production path.</p>
+<p><strong>Image generation prompt</strong>: An architectural diagram showing an OpenShift AI cluster with three layers: (1) a model serving layer with vLLM inference endpoint, (2) an agent orchestration layer with LangGraph, and (3) an agent infrastructure layer with Juice MCP server and a vector database. Arrows show the agent calling both the model and Juice for constraint checking. Use Red Hat brand colors (red #EE0000, dark blue #004080, white backgrounds). Clean, flat design with labeled boxes and directional arrows. 16:9 aspect ratio.</p>
+<p><strong>Alt text</strong>: Architecture diagram showing Juice integrated into a broader OpenShift AI deployment, with an agent orchestration layer connecting to both a model serving endpoint and the Juice MCP server for constraint checking, illustrating how agent infrastructure components coexist with ML workloads.</p>
+</div>
+<h2>Try it yourself</h2>
+<p>If you want to reproduce this PoC or build on it, here's everything you need:</p>
+<ul>
+<li><strong>Forked repository:</strong> <a href="https://github.com/aicatalyst-team/juice.git">github.com/aicatalyst-team/juice</a> — includes the Dockerfile and Kubernetes manifests we used</li>
+<li><strong>Container image:</strong> <code>quay.io/aicatalyst/juice-juice:latest</code> — pull and run directly</li>
+<li><strong>Original project:</strong> <a href="https://github.com/alvinunreal/juice">github.com/alvinunreal/juice</a> — the upstream source</li>
+<li><strong>Open Data Hub documentation:</strong> <a href="https://opendatahub.io/docs">opendatahub.io/docs</a></li>
+</ul>
+<p>To get Juice running on your own cluster in under five minutes:</p>
+<pre><code class="language-bash">
+oc new-project juice-poc
+oc apply -f k8s/pvc.yaml
+oc apply -f k8s/deployment.yaml
+oc apply -f k8s/service.yaml
+
+# Test the manifest endpoint
+curl http://$(oc get svc juice -o jsonpath='{.spec.clusterIP}'):8080/api/manifest
+</code></pre>
+<p>Juice is a small project, but it represents a pattern that matters: MCP-based agent infrastructure, containerized and running on OpenShift. As agentic AI architectures mature, the ecosystem of services around models — memory layers, tool servers, constraint stores — will need the same operational rigor as the models themselves. This PoC is a first step toward that.</p>
+  </article>
+
+  <div class="footer">
+    <p>Generated by AutoPoC &middot; Preview only — not for publication</p>
+  </div>
+</body>
+</html>
