@@ -26,6 +26,12 @@ spec:
           env:
             - name: JUICE_DB
               value: "/data/juice.db"
+            - name: JUICE_HOST
+              value: "0.0.0.0"
+            - name: JUICE_PORT
+              value: "8080"
+            - name: JUICE_TOKEN
+              value: "autopoc"
           resources:
             requests:
               memory: "256Mi"
@@ -40,14 +46,18 @@ spec:
             httpGet:
               path: /api/manifest
               port: 8080
-            initialDelaySeconds: 10
+            initialDelaySeconds: 15
             periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 6
           livenessProbe:
             httpGet:
               path: /api/manifest
               port: 8080
-            initialDelaySeconds: 15
+            initialDelaySeconds: 20
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
           securityContext:
             allowPrivilegeEscalation: false
             runAsNonRoot: true
