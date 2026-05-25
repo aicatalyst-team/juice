@@ -1,0 +1,64 @@
+# Stage 1: Build TypeScript and compile native modules
+FROM registry.access.redhat.com/ubi9/nodejs-22 AS builder
+
+USER 0
+
+# Install build tools needed for better-sqlite3 native module
+RUN dnf install -y python3 make gcc-c++ && dnf clean all
+
+USER 1001
+
+WORKDIR /opt/app-root/src
+
+# Install all dependencies (including devDependencies for tsc)
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Copy source and compile TypeScript
+COPY tsconfig.json ./
+COPY src/ src/
+RUN npm run build
+
+# Stage 2: Production runtime
+FROM registry.access.redhat.com/ubi9/nodejs-22
+
+USER 0
+
+# Install build tools for better-sqlite3 native rebuild
+RUN dnf install -y python3 make gcc-c++ && dnf clean all
+
+WORKDIR /opt/app-root/src
+
+# Install production dependencies only
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
+# Remove build tools after native module compilation to slim down
+RUN dnf remove -y gcc-c++ make && dnf clean all
+
+# Copy compiled output from builder
+COPY --from=builder /opt/app-root/src/dist/ dist/
+
+# Copy static assets served by the web UI
+COPY public/ public/
+COPY logo.svg ./
+
+# Create data directory for SQLite database (PVC mount point)
+RUN mkdir -p /data && \
+    chgrp -R 0 /data && chmod -R g=u /data
+
+# Environment variables
+ENV JUICE_DB=/data/juice.db
+ENV JUICE_HOST=0.0.0.0
+ENV JUICE_PORT=8080
+
+# OpenShift compatibility: group 0 permissions on app directory
+RUN chgrp -R 0 /opt/app-root && chmod -R g=u /opt/app-root
+
+EXPOSE 8080
+
+RUN chgrp -R 0 /opt/app-root/src/node_modules && chmod -R g=u /opt/app-root/src/node_modules || true
+USER 1001
+
+ENTRYPOINT ["node", "dist/cli.js"]
+CMD ["http"]
