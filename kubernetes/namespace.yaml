@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: juice
+  labels:
+    app.kubernetes.io/name: juice
+    app.kubernetes.io/managed-by: autopoc
